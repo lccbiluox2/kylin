@@ -339,7 +339,9 @@ public class HBaseConnection {
 
             if (null != families && families.length > 0) {
                 for (String family : families) {
+                    logger.info("hbase的family："+family);
                     HColumnDescriptor fd = newFamilyDescriptor(family);
+                    logger.info("hbase的全路径名："+desc.getClass().getCanonicalName());
                     desc.addFamily(fd);
                 }
             }

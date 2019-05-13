@@ -33,6 +33,14 @@
         <shadeBase>org.apache.kylin.job.shaded</shadeBase>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>cloudera</id>
+            <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
+        </repository>
+    </repositories>
+
+
     <dependencies>
         <dependency>
             <groupId>org.apache.kylin</groupId>
