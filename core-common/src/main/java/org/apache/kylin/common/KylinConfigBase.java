@@ -693,6 +693,10 @@ abstract public class KylinConfigBase implements Serializable {
         return Integer.parseInt(getOptional("kylin.job.sampling-hll-precision", "14"));
     }
 
+    /**
+     * Kylin的任务调度器有三种
+     * @return
+     */
     public Map<Integer, String> getSchedulers() {
         Map<Integer, String> r = Maps.newLinkedHashMap();
         r.put(0, "org.apache.kylin.job.impl.threadpool.DefaultScheduler");
@@ -714,6 +718,10 @@ abstract public class KylinConfigBase implements Serializable {
         return Integer.parseInt(getOptional("kylin.job.scheduler.priority-bar-fetch-from-queue", "20"));
     }
 
+    /**
+     * 系统构建CUBE调度的间隔
+     * @return
+     */
     public Integer getSchedulerPollIntervalSecond() {
         return Integer.parseInt(getOptional("kylin.job.scheduler.poll-interval-second", "30"));
     }

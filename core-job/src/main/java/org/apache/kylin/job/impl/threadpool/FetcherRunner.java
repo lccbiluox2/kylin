@@ -62,6 +62,7 @@ public abstract class FetcherRunner implements Runnable {
         logger.info(jobDesc + " prepare to schedule and its priority is " + priority);
         try {
             context.addRunningJob(executable);
+            // 提交任务到调度池中执行
             jobExecutor.execute(executable);
             logger.info(jobDesc + " scheduled");
         } catch (Exception ex) {

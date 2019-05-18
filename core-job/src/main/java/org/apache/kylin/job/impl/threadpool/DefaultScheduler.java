@@ -141,6 +141,7 @@ public class DefaultScheduler implements Scheduler<AbstractExecutable>, Connecti
         jobLock = lock;
 
         String serverMode = jobEngineConfig.getConfig().getServerMode();
+        // 只有服务模式为job和all的需要运行任务调度服务，query不需要
         if (!("job".equals(serverMode.toLowerCase(Locale.ROOT)) || "all".equals(serverMode.toLowerCase(Locale.ROOT)))) {
             logger.info("server mode: " + serverMode + ", no need to run job scheduler");
             return;
@@ -171,6 +172,7 @@ public class DefaultScheduler implements Scheduler<AbstractExecutable>, Connecti
         executableManager.resumeAllRunningJobs();
         logger.info("Finishing resume all running jobs.");
 
+        // 获取调度时间间隔，
         int pollSecond = jobEngineConfig.getPollIntervalSecond();
 
         logger.info("Fetching jobs every {} seconds", pollSecond);
@@ -180,10 +182,14 @@ public class DefaultScheduler implements Scheduler<AbstractExecutable>, Connecti
                 jobPool.execute(new JobRunner(executable));
             }
         };
+
+        // 判断任务调度是否考虑优先级，默认不考虑，即使用DefaultFetcherRunner
         fetcher = jobEngineConfig.getJobPriorityConsidered()
                 ? new PriorityFetcherRunner(jobEngineConfig, context, executableManager, jobExecutor)
                 : new DefaultFetcherRunner(jobEngineConfig, context, executableManager, jobExecutor);
         logger.info("Creating fetcher pool instance:" + System.identityHashCode(fetcher));
+
+        //每隔pollSecond去获取一次任务
         fetcherPool.scheduleAtFixedRate(fetcher, pollSecond / 10, pollSecond, TimeUnit.SECONDS);
         hasStarted = true;
     }

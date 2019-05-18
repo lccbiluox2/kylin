@@ -44,15 +44,19 @@ public class BatchCubingJobBuilder2 extends JobBuilderSupport {
 
     public BatchCubingJobBuilder2(CubeSegment newSegment, String submitter) {
         super(newSegment, submitter);
+        /** 创建CUBE数据的输入端，目前支持 hive  jdbc kafak */
         this.inputSide = MRUtil.getBatchCubingInputSide(seg);
+        /** 创建CUBE数据的输出端，目前支持 DruidStorage HBASE  HybridStorage  */
         this.outputSide = MRUtil.getBatchCubingOutputSide2(seg);
     }
 
     public CubingJob build() {
         logger.info("MR_V2 new job to BUILD segment " + seg);
 
+        // 获得一个初始化的 Job 实例
         final CubingJob result = CubingJob.createBuildJob(seg, submitter, config);
         final String jobId = result.getId();
+        // 获取 cuboid 的数据路径，以配置的 working-dir 开头 ，配置文件中配置 kylin.env.hdfs-working-dir 默认 /kylin
         final String cuboidRootPath = getCuboidRootPath(jobId);
 
         // Phase 1: Create Flat Table & Materialize Hive View in Lookup Tables
@@ -61,16 +65,20 @@ public class BatchCubingJobBuilder2 extends JobBuilderSupport {
         // Phase 2: Build Dictionary
         result.addTask(createFactDistinctColumnsStep(jobId));
 
+        // 判断是否是高基维（UHC），如果是则添加新的任务对高基维进行处理
         if (isEnableUHCDictStep()) {
             result.addTask(createBuildUHCDictStep(jobId));
         }
 
+        // 构建字典
         result.addTask(createBuildDictionaryStep(jobId));
+        // 保存 cuboid 统计数据
         result.addTask(createSaveStatisticsStep(jobId));
 
         // add materialize lookup tables if needed
         LookupMaterializeContext lookupMaterializeContext = addMaterializeLookupTableSteps(result);
 
+        // 创建 HTable
         outputSide.addStepPhase2_BuildDictionary(result);
 
         if (seg.getCubeDesc().isShrunkenDictFromGlobalEnabled()) {
@@ -78,6 +86,7 @@ public class BatchCubingJobBuilder2 extends JobBuilderSupport {
         }
 
         // Phase 3: Build Cube
+        // 构建CUBE
         addLayerCubingSteps(result, jobId, cuboidRootPath); // layer cubing, only selected algorithm will execute
         addInMemCubingSteps(result, jobId, cuboidRootPath); // inmem cubing, only selected algorithm will execute
         outputSide.addStepPhase3_BuildCube(result);

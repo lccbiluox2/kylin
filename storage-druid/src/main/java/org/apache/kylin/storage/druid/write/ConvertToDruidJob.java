@@ -40,6 +40,8 @@ import org.apache.kylin.engine.mr.common.BatchConstants;
 import java.util.Map;
 
 public class ConvertToDruidJob extends AbstractHadoopJob {
+
+
     @Override
     public int run(String[] args) throws Exception {
         Options options = new Options();

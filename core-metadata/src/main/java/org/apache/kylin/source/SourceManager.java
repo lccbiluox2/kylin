@@ -144,6 +144,7 @@ public class SourceManager {
         return getSource(table).createReadableTable(table, uuid);
     }
 
+    /** 创建CUBE数据的输入端，目前支持 hive  jdbc kafak */
     public static <T> T createEngineAdapter(ISourceAware table, Class<T> engineInterface) {
         return getSource(table).adaptToBuildEngine(engineInterface);
     }

@@ -149,11 +149,19 @@ public class DruidMROutput implements IMROutput2 {
         jobFlow.addTask(step);
     }
 
+    /**
+     * 转换 Cuboid 为 Druid
+     * @param support
+     * @param seg
+     * @param jobFlow
+     */
     private void createConvertCuboidToDruidStep(JobBuilderSupport support, CubeSegment seg, DefaultChainedExecutable jobFlow) {
+        // 得到CUBE名称
         final String cubeName = seg.getRealization().getName();
         final String dataSource = DruidSchema.getDataSource(seg.getCubeDesc());
 
         final String inputPath = support.getCuboidRootPath(jobFlow.getId()) + "*";
+        // 从配置文件中得到segments的存储路径
         final String outputPath = seg.getConfig().getDruidHdfsLocation() + "/" + dataSource + "/" + seg.getUuid();
 
         StringBuilder cmd = new StringBuilder();
@@ -164,6 +172,9 @@ public class DruidMROutput implements IMROutput2 {
         appendExecCmdParameters(cmd, BatchConstants.ARG_INPUT, inputPath);
         appendExecCmdParameters(cmd, BatchConstants.ARG_OUTPUT, outputPath);
 
+        /**
+         * 转换成Druid文件
+         */
         MapReduceExecutable step = new MapReduceExecutable();
         step.setName("Convert Cuboid to Druid");
         step.setMapReduceJobClass(ConvertToDruidJob.class);
@@ -171,6 +182,9 @@ public class DruidMROutput implements IMROutput2 {
 
         jobFlow.addTask(step);
 
+        /**
+         * 从hdfs 加载数据到 druid
+         */
         LoadDruidSegmentStep step2 = new LoadDruidSegmentStep();
         step2.setName("Load Segment to Druid");
         step2.setCubeName(seg.getRealization().getName());

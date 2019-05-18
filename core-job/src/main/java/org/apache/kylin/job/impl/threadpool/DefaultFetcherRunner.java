@@ -45,11 +45,13 @@ public class DefaultFetcherRunner extends FetcherRunner {
                 "FetcherRunner %s", System.identityHashCode(this))) {//
             // logger.debug("Job Fetcher is running...");
             Map<String, Executable> runningJobs = context.getRunningJobs();
+            // 任务调度池是否满了，默认只能同时执行10个job
             if (isJobPoolFull()) {
                 return;
             }
 
             int nRunning = 0, nReady = 0, nStopped = 0, nOthers = 0, nError = 0, nDiscarded = 0, nSUCCEED = 0;
+            // 获取索引的job
             for (final String id : executableManager.getAllJobIds()) {
                 if (isJobPoolFull()) {
                     return;
@@ -82,6 +84,7 @@ public class DefaultFetcherRunner extends FetcherRunner {
                     continue;
                 }
 
+                // 根据任务id获取具体的任务
                 final AbstractExecutable executable = executableManager.getJob(id);
                 if (!executable.isReady()) {
                     nOthers++;
@@ -89,6 +92,7 @@ public class DefaultFetcherRunner extends FetcherRunner {
                 }
 
                 nReady++;
+                //添加任务到任务调度池
                 addToJobPool(executable, executable.getDefaultPriority());
             }
 

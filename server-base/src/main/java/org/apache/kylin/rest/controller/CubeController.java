@@ -394,10 +394,15 @@ public class CubeController extends BasicController {
             Map<Integer, Long> sourcePartitionOffsetStart, Map<Integer, Long> sourcePartitionOffsetEnd,
             String buildType, boolean force) {
         try {
+            //获取提交任务的用户的用户名
             String submitter = SecurityContextHolder.getContext().getAuthentication().getName();
+            //获取Cube实例
             CubeInstance cube = jobService.getCubeManager().getCube(cubeName);
 
+            //检测有多少个处于即将构建的状态的job，默认只能同时提10个job，大于则会抛异常，提交失败
             checkBuildingSegment(cube);
+
+            //通过jobService来提交任务,即为上篇文章介绍的Cube任务调度服务
             return jobService.submitJob(cube, tsRange, segRange, sourcePartitionOffsetStart, sourcePartitionOffsetEnd,
                     CubeBuildTypeEnum.valueOf(buildType), force, submitter);
         } catch (Throwable e) {

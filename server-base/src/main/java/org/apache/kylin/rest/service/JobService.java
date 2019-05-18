@@ -120,6 +120,8 @@ public class JobService extends BasicService implements InitializingBean {
         TimeZone.setDefault(tzone);
 
         final KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
+
+        // 获取配置的任务调度器，默认为org.apache.kylin.job.impl.threadpool.DefaultScheduler
         final Scheduler<AbstractExecutable> scheduler = (Scheduler<AbstractExecutable>) SchedulerFactory
                 .scheduler(kylinConfig.getSchedulerType());
 
@@ -127,6 +129,7 @@ public class JobService extends BasicService implements InitializingBean {
             @Override
             public void run() {
                 try {
+                    // 调度服务初始化
                     scheduler.init(new JobEngineConfig(kylinConfig), new ZookeeperJobLock());
                     if (!scheduler.hasStarted()) {
                         logger.info("scheduler has not been started");
@@ -211,7 +214,9 @@ public class JobService extends BasicService implements InitializingBean {
     public JobInstance submitJob(CubeInstance cube, TSRange tsRange, SegmentRange segRange, //
             Map<Integer, Long> sourcePartitionOffsetStart, Map<Integer, Long> sourcePartitionOffsetEnd,
             CubeBuildTypeEnum buildType, boolean force, String submitter) throws IOException {
+        /** 这里做权限认证 */
         aclEvaluate.checkProjectOperationPermission(cube);
+        /** 真正提交任务 */
         JobInstance jobInstance = submitJobInternal(cube, tsRange, segRange, sourcePartitionOffsetStart,
                 sourcePartitionOffsetEnd, buildType, force, submitter);
 

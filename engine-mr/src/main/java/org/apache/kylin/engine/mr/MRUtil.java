@@ -37,6 +37,7 @@ import org.apache.kylin.storage.StorageFactory;
 
 public class MRUtil {
 
+    /** 创建CUBE数据的输入端，目前支持 hive  jdbc kafak */
     public static IMRBatchCubingInputSide getBatchCubingInputSide(CubeSegment seg) {
         IJoinedFlatTableDesc flatDesc = EngineFactory.getJoinedFlatTableDesc(seg);
         return SourceManager.createEngineAdapter(seg, IMRInput.class).getBatchCubingInputSide(flatDesc);
@@ -55,6 +56,7 @@ public class MRUtil {
         return TableMetadataManager.getInstance(KylinConfig.getInstanceFromEnv()).getTableDesc(tableName, prj);
     }
 
+    /** 创建CUBE数据的输出端，目前支持 DruidStorage HBASE  HybridStorage  */
     public static IMRBatchCubingOutputSide2 getBatchCubingOutputSide2(CubeSegment seg) {
         return StorageFactory.createEngineAdapter(seg, IMROutput2.class).getBatchCubingOutputSide(seg);
     }

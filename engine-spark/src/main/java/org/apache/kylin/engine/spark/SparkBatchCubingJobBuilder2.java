@@ -34,6 +34,8 @@ import org.apache.kylin.job.constant.ExecutableConstants;
 import org.apache.kylin.metadata.model.IJoinedFlatTableDesc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.spark.api.java.function.Function;
+
 
 /**
  */
