@@ -222,6 +222,7 @@ public class SparkCubingByLayer extends AbstractApplication implements Serializa
         //HadoopUtil.deleteHDFSMeta(metaUrl);
     }
 
+
     protected JavaPairRDD<ByteArray, Object[]> prepareOutput(JavaPairRDD<ByteArray, Object[]> rdd, KylinConfig config,
             CubeSegment segment, int level) {
         return rdd;
