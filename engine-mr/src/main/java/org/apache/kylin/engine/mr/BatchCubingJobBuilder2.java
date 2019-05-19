@@ -53,7 +53,7 @@ public class BatchCubingJobBuilder2 extends JobBuilderSupport {
     public CubingJob build() {
         logger.info("MR_V2 new job to BUILD segment " + seg);
 
-        // 获得一个初始化的 Job 实例
+        // 获得一个初始化的 Job 实例     //构建job任务（DefaultChainedExecutable类型，是一个任务链）
         final CubingJob result = CubingJob.createBuildJob(seg, submitter, config);
         final String jobId = result.getId();
         // 获取 cuboid 的数据路径，以配置的 working-dir 开头 ，配置文件中配置 kylin.env.hdfs-working-dir 默认 /kylin
@@ -114,6 +114,7 @@ public class BatchCubingJobBuilder2 extends JobBuilderSupport {
 
     protected void addLayerCubingSteps(final CubingJob result, final String jobId, final String cuboidRootPath) {
         // Don't know statistics so that tree cuboid scheduler is not determined. Determine the maxLevel at runtime
+        // 不知道统计数据，因此无法确定树长方体调度程序。在运行时确定maxLevel
         final int maxLevel = CuboidUtil.getLongestDepth(seg.getCuboidScheduler().getAllCuboidIds());
         // base cuboid step
         result.addTask(createBaseCuboidStep(getCuboidOutputPathsByLevel(cuboidRootPath, 0), jobId));

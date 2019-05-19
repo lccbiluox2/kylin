@@ -156,26 +156,35 @@ public class SparkCubingByLayer extends AbstractApplication implements Serializa
         boolean[] needAggr = new boolean[cubeDesc.getMeasures().size()];
         boolean allNormalMeasure = true;
         for (int i = 0; i < cubeDesc.getMeasures().size(); i++) {
+            // RawMeasureType这里为true，其他均为false
             needAggr[i] = !cubeDesc.getMeasures().get(i).getFunction().getMeasureType().onlyAggrInBaseCuboid();
             allNormalMeasure = allNormalMeasure && needAggr[i];
         }
         logger.info("All measure are normal (agg on all cuboids) ? : " + allNormalMeasure);
         StorageLevel storageLevel = StorageLevel.fromString(envConfig.getSparkStorageLevel());
 
+        // 默认为true
         boolean isSequenceFile = JoinedFlatTable.SEQUENCEFILE.equalsIgnoreCase(envConfig.getFlatTableStorageFormat());
 
+        // 从hive数据源表中构建出RDD，hiveRecordInputRDD得到格式为每行数据的每列的值的
+        // RDD（JavaRDD<String[]>），maptoPair是按照basecubiod（每个维度都包含），计算出格式为
+        // rowkey（shard id+cuboid id+values）和每列的值的RDD encodedBaseRDD
         final JavaPairRDD<ByteArray, Object[]> encodedBaseRDD = SparkUtil
                 .hiveRecordInputRDD(isSequenceFile, sc, inputPath, hiveTable)
                 .mapToPair(new EncodeBaseCuboid(cubeName, segmentId, metaUrl, sConf));
 
         Long totalCount = 0L;
+        // 默认为false
         if (envConfig.isSparkSanityCheckEnabled()) {
+            // 数据总条数
             totalCount = encodedBaseRDD.count();
         }
 
+        // 聚合度量值的具体方法
         final BaseCuboidReducerFunction2 baseCuboidReducerFunction = new BaseCuboidReducerFunction2(cubeName, metaUrl,
                 sConf);
         BaseCuboidReducerFunction2 reducerFunction2 = baseCuboidReducerFunction;
+        // 度量没有RAW的为true
         if (allNormalMeasure == false) {
             reducerFunction2 = new CuboidReducerFunction2(cubeName, metaUrl, sConf, needAggr);
         }
@@ -188,8 +197,10 @@ public class SparkCubingByLayer extends AbstractApplication implements Serializa
         // aggregate to calculate base cuboid
         allRDDs[0] = encodedBaseRDD.reduceByKey(baseCuboidReducerFunction, partition).persist(storageLevel);
 
+        // 数据保存到hdfs上
         saveToHDFS(allRDDs[0], metaUrl, cubeName, cubeSegment, outputPath, 0, job, envConfig);
 
+        // 根据base cuboid上卷聚合各个层级的数据，改变数据的rowKey，去掉相应的维度
         PairFlatMapFunction flatMapFunction = new CuboidFlatMap(cubeName, segmentId, metaUrl, sConf);
         // aggregate to ND cuboids
         for (level = 1; level <= totalLevels; level++) {
@@ -197,6 +208,8 @@ public class SparkCubingByLayer extends AbstractApplication implements Serializa
 
             allRDDs[level] = allRDDs[level - 1].flatMapToPair(flatMapFunction).reduceByKey(reducerFunction2, partition)
                     .persist(storageLevel);
+            // flatMapToPair得到上卷聚合后的数据，reduceByKey再进一步根据新的rowKey进行聚合操作，
+            // 因为进行flatMapToPair操作后会有部分数据的rowKey值相同
             allRDDs[level - 1].unpersist();
             if (envConfig.isSparkSanityCheckEnabled() == true) {
                 sanityCheck(allRDDs[level], totalCount, level, cubeStatsReader, countMeasureIndex);

@@ -244,6 +244,7 @@ public class JobService extends BasicService implements InitializingBean {
         CubeSegment newSeg = null;
         try {
             if (buildType == CubeBuildTypeEnum.BUILD) {
+                //获取数据源类型（HiveSource、JdbcSource、KafkaSource）
                 ISource source = SourceManager.getSource(cube);
                 SourcePartition src = new SourcePartition(tsRange, segRange, sourcePartitionOffsetStart,
                         sourcePartitionOffsetEnd);

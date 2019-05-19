@@ -48,7 +48,9 @@ public class SparkBatchCubingJobBuilder2 extends JobBuilderSupport {
 
     public SparkBatchCubingJobBuilder2(CubeSegment newSegment, String submitter) {
         super(newSegment, submitter);
+        /** 创建CUBE数据的输入端，目前支持 hive  jdbc kafak */
         this.inputSide = SparkUtil.getBatchCubingInputSide(seg);
+        /** 创建CUBE数据的输出端，目前支持 DruidStorage HBASE  HybridStorage  */
         this.outputSide = SparkUtil.getBatchCubingOutputSide(seg);
     }
 
@@ -118,8 +120,11 @@ public class SparkBatchCubingJobBuilder2 extends JobBuilderSupport {
 
     protected void addLayerCubingSteps(final CubingJob result, final String jobId, final String cuboidRootPath) {
         final SparkExecutable sparkExecutable = new SparkExecutable();
+        // 设置cube计算的类
         sparkExecutable.setClassName(SparkCubingByLayer.class.getName());
+        // 配置spark任务，主要为数据来源和cuboid数据保存位置
         configureSparkJob(seg, sparkExecutable, jobId, cuboidRootPath);
+        // task加入到job中
         result.addTask(sparkExecutable);
     }
 
