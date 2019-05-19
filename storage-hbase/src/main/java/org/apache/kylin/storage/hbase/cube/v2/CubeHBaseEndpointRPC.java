@@ -243,6 +243,7 @@ public class CubeHBaseEndpointRPC extends CubeHBaseRPC {
                             ServerRpcController controller = new ServerRpcController();
                             BlockingRpcCallback<CubeVisitResponse> rpcCallback = new BlockingRpcCallback<>();
                             try {
+                                //发送请求到hbase的协处理器进行数据查询
                                 rowsService.visitCube(controller, request, rpcCallback);
                                 CubeVisitResponse response = rpcCallback.get();
                                 if (controller.failedOnException()) {
@@ -270,6 +271,8 @@ public class CubeHBaseEndpointRPC extends CubeHBaseRPC {
                             return null;
                         }
                     }, new Batch.Callback<CubeVisitResponse>() {
+
+                        // 接收到协处理器发回的查询结果
                         @Override
                         public void update(byte[] region, byte[] row, CubeVisitResponse result) {
                             if (result == null) {
@@ -292,6 +295,7 @@ public class CubeHBaseEndpointRPC extends CubeHBaseRPC {
 
                             logger.info(logHeader + getStatsString(region, result));
 
+                            // 获取hbase协处理器返回的查询结果中的相关状态数据
                             Stats stats = result.getStats();
                             queryContext.addAndGetScannedRows(stats.getScannedRowCount());
                             queryContext.addAndGetScannedBytes(stats.getScannedBytes());

@@ -84,6 +84,8 @@ public class CubeSegmentScanner implements Iterable<GTRecord> {
 
         scanRequest = scanRangePlanner.planScanRequest();
 
+        // gtStorage为配置项kylin.storage.hbase.gtstorage, 默认值为
+        // org.apache.kylin.storage.hbase.cube.v2.CubeHBaseEndpointRPC
         String gtStorage = ((GTCubeStorageQueryBase) context.getStorageQuery()).getGTStorage();
         scanner = new ScannerWorker(cubeSeg, cuboid, scanRequest, gtStorage, context);
     }

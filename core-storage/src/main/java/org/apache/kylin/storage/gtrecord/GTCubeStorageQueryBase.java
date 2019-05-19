@@ -85,6 +85,7 @@ public abstract class GTCubeStorageQueryBase implements IStorageQuery {
 
     @Override
     public ITupleIterator search(StorageContext context, SQLDigest sqlDigest, TupleInfo returnTupleInfo) {
+        // 这一步有个很重要的步骤就是根据查询条件找到对应的cuboid（findCuboid）
         GTCubeStorageQueryRequest request = getStorageQueryRequest(context, sqlDigest, returnTupleInfo);
 
         List<CubeSegmentScanner> scanners = Lists.newArrayList();

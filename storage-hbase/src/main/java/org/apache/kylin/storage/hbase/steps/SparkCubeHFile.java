@@ -192,10 +192,13 @@ public class SparkCubeHFile extends AbstractApplication implements Serializable 
                 FileOutputFormat.setOutputPath(job, new Path(outputPath));
 
                 // inputPath has the same FileSystem as hbaseClusterFs when in HBase standalone mode
+                // 从上一步保存的cuboid文件中读出cube数据
                 JavaPairRDD<Text, Text> inputRDDs = SparkUtil.parseInputPath(inputPath, hbaseClusterFs, sc, Text.class,
                         Text.class);
+                // 转换为hfile的格式
                 final JavaPairRDD<RowKeyWritable, KeyValue> hfilerdd;
                 if (quickPath) {
+                    // 只有一个Column Family
                     hfilerdd = inputRDDs.mapToPair(new PairFunction<Tuple2<Text, Text>, RowKeyWritable, KeyValue>() {
                         @Override
                         public Tuple2<RowKeyWritable, KeyValue> call(Tuple2<Text, Text> textTextTuple2) throws Exception {
@@ -212,10 +215,12 @@ public class SparkCubeHFile extends AbstractApplication implements Serializable 
 
                             List<Tuple2<RowKeyWritable, KeyValue>> result = Lists.newArrayListWithExpectedSize(cfNum);
                             Object[] inputMeasures = new Object[cubeDesc.getMeasures().size()];
+                            // 从字节数组中反序列化出所有的度量值
                             inputCodec.decode(ByteBuffer.wrap(textTextTuple2._2.getBytes(), 0, textTextTuple2._2.getLength()),
                                     inputMeasures);
 
                             for (int i = 0; i < cfNum; i++) {
+                                // 创建KeyValue，里面的value值又被序列化为ByteBuffer
                                 KeyValue outputValue = keyValueCreators.get(i).create(textTextTuple2._1, inputMeasures);
                                 result.add(new Tuple2<>(new RowKeyWritable(outputValue.createKeyOnly(false).getKey()),
                                         outputValue));

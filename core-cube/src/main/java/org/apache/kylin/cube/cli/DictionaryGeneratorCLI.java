@@ -46,6 +46,7 @@ public class DictionaryGeneratorCLI {
 
     public static void processSegment(KylinConfig config, String cubeName, String segmentID, String uuid,
             DistinctColumnValuesProvider factTableValueProvider, DictionaryProvider dictProvider) throws IOException {
+        // 根据cube的名称和segmentID获取对应的CubeSegment实例
         CubeInstance cube = CubeManager.getInstance(config).getCube(cubeName);
         CubeSegment segment = cube.getSegmentById(segmentID);
 
@@ -57,15 +58,24 @@ public class DictionaryGeneratorCLI {
         CubeManager cubeMgr = CubeManager.getInstance(config);
 
         // dictionary
+        // 获取所有需要构建字典的维度列
         for (TblColRef col : cubeSeg.getCubeDesc().getAllColumnsNeedDictionaryBuilt()) {
             logger.info("Building dictionary for " + col);
+            // 读取维度列的distinct值的文件（调用前面new DistinctColumnValuesProvider()中重写的
+            // getDistinctValuesFor）
             IReadableTable inpTable = factTableValueProvider.getDistinctValuesFor(col);
 
             Dictionary<String> preBuiltDict = null;
             if (dictProvider != null) {
+                // 调用前面new DictionaryProvider()中重写的方法获取预先构建的字典，如果没有预先构
+                // 建会返回null
                 preBuiltDict = dictProvider.getDictionary(col);
             }
 
+            // 如果已经构建过了则保存字典，没有则构建。字典保存的目录如：
+            // /kylin/kylin_metadata/kylin-20240f69-5abe-6c82-56c7-
+            // 11c0ea0ffa42/kylin_sales_cube/metadata/
+            // dict/DEFAULT.KYLIN_SALES/SELLER_ID/e7cd07a8-7ad3-5ad2-1e39-6f37e12921b1.dict
             if (preBuiltDict != null) {
                 logger.debug("Dict for '" + col.getName() + "' has already been built, save it");
                 cubeMgr.saveDictionary(cubeSeg, col, inpTable, preBuiltDict);

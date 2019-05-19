@@ -201,6 +201,8 @@ public class QueryService extends BasicService {
         SQLResponse ret = null;
         try {
             final String user = SecurityContextHolder.getContext().getAuthentication().getName();
+            // 加入到查询队列，BadQueryDetector会对该查询进行检测，看是否超时或是否为慢查询（默认
+​            // 90S）
             badQueryDetector.queryStart(Thread.currentThread(), sqlRequest, user, queryId);
 
             ret = queryWithSqlMassage(sqlRequest);
@@ -348,6 +350,7 @@ public class QueryService extends BasicService {
 
     public SQLResponse doQueryWithCache(SQLRequest sqlRequest) {
         long t = System.currentTimeMillis();
+        // 检查权限
         aclEvaluate.checkProjectReadPermission(sqlRequest.getProject());
         logger.info("Check query permission in " + (System.currentTimeMillis() - t) + " ms.");
         return doQueryWithCache(sqlRequest, false);
@@ -355,14 +358,17 @@ public class QueryService extends BasicService {
 
     public SQLResponse doQueryWithCache(SQLRequest sqlRequest, boolean isQueryInspect) {
         Message msg = MsgPicker.getMsg();
+        // 获取用户名
         sqlRequest.setUsername(getUserName());
 
         KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
         String serverMode = kylinConfig.getServerMode();
+        // 服务模式不为query和all的无法进行查询
         if (!(Constant.SERVER_MODE_QUERY.equals(serverMode.toLowerCase(Locale.ROOT))
                 || Constant.SERVER_MODE_ALL.equals(serverMode.toLowerCase(Locale.ROOT)))) {
             throw new BadRequestException(String.format(Locale.ROOT, msg.getQUERY_NOT_ALLOWED(), serverMode));
         }
+        // project不能为空
         if (StringUtils.isBlank(sqlRequest.getProject())) {
             throw new BadRequestException(msg.getEMPTY_PROJECT_NAME());
         }
@@ -371,23 +377,30 @@ public class QueryService extends BasicService {
         if (mgr.getProject(sqlRequest.getProject()) == null) {
             throw new BadRequestException(msg.getPROJECT_NOT_FOUND());
         }
+        // sql语句不能为空
         if (StringUtils.isBlank(sqlRequest.getSql())) {
             throw new BadRequestException(msg.getNULL_EMPTY_SQL());
         }
 
+        // 用于保存用户查询输入的相关参数，一般用于调试
         if (sqlRequest.getBackdoorToggles() != null)
             BackdoorToggles.addToggles(sqlRequest.getBackdoorToggles());
 
+        // 初始化查询上下文，设置了queryId和queryStartMillis
         final QueryContext queryContext = QueryContextFacade.current();
 
+        // 设置新的查询线程名
         try (SetThreadName ignored = new SetThreadName("Query %s", queryContext.getQueryId())) {
             SQLResponse sqlResponse = null;
+            // 获取查询的sql语句
             String sql = sqlRequest.getSql();
             String project = sqlRequest.getProject();
+            // 是否开启了查询缓存，kylin.query.cache-enabled默认开启
             boolean isQueryCacheEnabled = isQueryCacheEnabled(kylinConfig);
             logger.info("Using project: " + project);
             logger.info("The original query:  " + sql);
 
+            // 移除sql语句中的注释
             sql = QueryUtil.removeCommentInSql(sql);
 
             Pair<Boolean, String> result = TempStatementUtil.handleTempStatement(sql, kylinConfig);
@@ -404,13 +417,17 @@ public class QueryService extends BasicService {
                 sqlResponse = new SQLResponse(null, null, 0, false, null);
             }
 
+            // 缓存中直接查询
             if (sqlResponse == null && isQueryCacheEnabled) {
                 sqlResponse = searchQueryInCache(sqlRequest);
             }
 
             // real execution if required
             if (sqlResponse == null) {
+                // 并发查询限制, kylin.query.project-concurrent-running-threshold, 默认为0, 无
+                // 限制
                 try (QueryRequestLimits limit = new QueryRequestLimits(sqlRequest.getProject())) {
+                    // 查询，如有必要更新缓存
                     sqlResponse = queryAndUpdateCache(sqlRequest, isQueryCacheEnabled);
                 }
             }
@@ -440,10 +457,12 @@ public class QueryService extends BasicService {
 
         SQLResponse sqlResponse = null;
         try {
+            // 判断是不是select查询语句
             final boolean isSelect = QueryUtil.isSelectStatement(sqlRequest.getSql());
             if (isSelect) {
                 sqlResponse = query(sqlRequest, queryContext.getQueryId());
             } else if (kylinConfig.isPushDownEnabled() && kylinConfig.isPushDownUpdateEnabled()) {
+                // 查询下推到其他的查询引擎，比如直接通过hive查询
                 sqlResponse = update(sqlRequest);
             } else {
                 logger.debug("Directly return exception as the sql is unsupported, and query pushdown is disabled");

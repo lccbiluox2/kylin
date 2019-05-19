@@ -48,10 +48,12 @@ public class RowKeyColumnIO implements java.io.Serializable {
     }
 
     public void writeColumn(TblColRef col, String value, int roundingFlag, byte defaultValue, byte[] output, int outputOffset) {
+        // 获取维度列的编码方法，调用CubeDimEncMap的get方法
         DimensionEncoding dimEnc = dimEncMap.get(col);
-        if (dimEnc instanceof DictionaryDimEnc)
+        if (dimEnc instanceof DictionaryDimEnc) {
             dimEnc = ((DictionaryDimEnc) dimEnc).copy(roundingFlag, defaultValue);
-
+        }
+        // 调用对应的encode方法对维度值进行编码
         dimEnc.encode(value, output, outputOffset);
     }
 

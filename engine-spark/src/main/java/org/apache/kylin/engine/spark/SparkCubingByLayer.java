@@ -120,6 +120,9 @@ public class SparkCubingByLayer extends AbstractApplication implements Serializa
 
         Class[] kryoClassArray = new Class[] { Class.forName("scala.reflect.ClassTag$$anon$1") };
 
+        /**
+         * Spark 运行的主要方法
+         */
         SparkConf conf = new SparkConf().setAppName("Cubing for:" + cubeName + " segment " + segmentId);
         //serialization conf
         conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
@@ -299,6 +302,7 @@ public class SparkCubingByLayer extends AbstractApplication implements Serializa
                             CubeJoinedFlatTableEnrich interDesc = new CubeJoinedFlatTableEnrich(
                                     EngineFactory.getJoinedFlatTableDesc(cubeSegment), cubeDesc);
                             long baseCuboidId = Cuboid.getBaseCuboidId(cubeDesc);
+                            // 计算出base cuboid id
                             Cuboid baseCuboid = Cuboid.findForMandatory(cubeDesc, baseCuboidId);
                             baseCuboidBuilder = new BaseCuboidBuilder(kConfig, cubeDesc, cubeSegment, interDesc,
                                     AbstractRowKeyEncoder.createInstance(cubeSegment, baseCuboid),
@@ -309,6 +313,8 @@ public class SparkCubingByLayer extends AbstractApplication implements Serializa
                 }
             }
             baseCuboidBuilder.resetAggrs();
+            // 根据Hive中读出的RDD（所有的维度列值）进行处理。
+            // 这里的rowKey为shard id + cuboid id + values
             byte[] rowKey = baseCuboidBuilder.buildKey(rowArray);
             Object[] result = baseCuboidBuilder.buildValueObjects(rowArray);
             return new Tuple2<>(new ByteArray(rowKey), result);

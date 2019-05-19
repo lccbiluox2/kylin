@@ -110,6 +110,7 @@ public class OLAPEnumerator implements Enumerator<Object[]> {
         SQLDigest sqlDigest = olapContext.getSQLDigest();
 
         // query storage engine
+        // storageEngine为CubeStorageQuery，继承GTCubeStorageQueryBase
         IStorageQuery storageEngine = StorageFactory.createQuery(olapContext.realization);
         ITupleIterator iterator = storageEngine.search(olapContext.storageContext, sqlDigest,
                 olapContext.returnTupleInfo);

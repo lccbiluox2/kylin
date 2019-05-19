@@ -55,9 +55,12 @@ public class ScannerWorker {
         final GTInfo info = scanRequest.getInfo();
 
         try {
+            // 这里的rpc为org.apache.kylin.storage.hbase.cube.v2.CubeHBaseEndpointRPC
             IGTStorage rpc = (IGTStorage) Class.forName(gtStorage)
                     .getConstructor(ISegment.class, Cuboid.class, GTInfo.class, StorageContext.class)
                     .newInstance(segment, cuboid, info, context); // default behavior
+            // internal为每个segment的查询结果，后面会调用iterator获取结果，calcite会将各个segment
+​            // 的结果进行聚合, EnumerableDefaults中的aggregate
             internal = rpc.getGTScanner(scanRequest);
         } catch (Exception e) {
             throw new RuntimeException(e);

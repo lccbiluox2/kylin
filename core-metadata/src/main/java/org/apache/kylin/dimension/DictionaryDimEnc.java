@@ -95,6 +95,7 @@ public class DictionaryDimEnc extends DimensionEncoding implements Serializable 
     @Override
     public void encode(String valueStr, byte[] output, int outputOffset) {
         try {
+            // 根据字典获取维度值的编码值，最后将int类型的编码值转换成byte数组
             int id = dict.getIdFromValue(valueStr, roundingFlag);
             BytesUtil.writeUnsigned(id, output, outputOffset, fixedLen);
         } catch (IllegalArgumentException ex) {

@@ -66,8 +66,10 @@ public class BytesUtil {
         return (short) readShort(bytes, 0, Shorts.BYTES);
     }
 
+    // 若num为300, bytes为byte[2], offset为0, size为2
     public static void writeUnsigned(int num, byte[] bytes, int offset, int size) {
         for (int i = offset + size - 1; i >= offset; i--) {
+            // bytes[1]为44, num右移8位后为1, bytes[0]为1
             bytes[i] = (byte) num;
             num >>>= 8;
         }

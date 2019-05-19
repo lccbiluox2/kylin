@@ -70,13 +70,16 @@ public class CreateDictionaryJob extends AbstractHadoopJob {
 
         final KylinConfig config = KylinConfig.getInstanceFromEnv();
 
+        // 对该segment进行字典的构建
         DictionaryGeneratorCLI.processSegment(config, cubeName, segmentID, jobId, new DistinctColumnValuesProvider() {
             @Override
             public IReadableTable getDistinctValuesFor(TblColRef col) {
+                // 读取文件中的对应维度的distinct值
                 return new SortedColumnDFSFile(factColumnsInputPath + "/" + col.getIdentity(), col.getType());
             }
         }, new DictionaryProvider() {
 
+            // 获取对应维度使用的编码字典
             @Override
             public Dictionary<String> getDictionary(TblColRef col) throws IOException {
                 CubeManager cubeManager = CubeManager.getInstance(config);
@@ -84,19 +87,27 @@ public class CreateDictionaryJob extends AbstractHadoopJob {
                 List<TblColRef> uhcColumns = cube.getDescriptor().getAllUHCColumns();
 
                 Path colDir;
+                // 对于UHC维度列路径类似于
+                // /kylin/kylin_metadata/kylin-20240f69-5abe-6c82-56c7-
+                // 11c0ea0ffa42/kylin_sales_cube/dict/{colName}
                 if (config.isBuildUHCDictWithMREnabled() && uhcColumns.contains(col)) {
                     colDir = new Path(dictPath, col.getIdentity());
                 } else {
+                    // 上一步保存distinct值的文件路径,类似于
+                    // /kylin/kylin_metadata/kylin-20240f69-5abe-6c82-56c7-
+                    // 11c0ea0ffa42/kylin_sales_cube/fact_distinct_columns/{colName}
                     colDir = new Path(factColumnsInputPath, col.getIdentity());
                 }
                 FileSystem fs = HadoopUtil.getWorkingFileSystem();
 
+                // 过滤以{colName}.rldict开头的文件
                 Path dictFile = HadoopUtil.getFilterOnlyPath(fs, colDir, col.getName() + FactDistinctColumnsReducer.DICT_FILE_POSTFIX);
                 if (dictFile == null) {
                     logger.info("Dict for '" + col.getName() + "' not pre-built.");
                     return null;
                 }
 
+                // 读取字典
                 try (SequenceFile.Reader reader = new SequenceFile.Reader(HadoopUtil.getCurrentConfiguration(), SequenceFile.Reader.file(dictFile))) {
                     NullWritable key = NullWritable.get();
                     ArrayPrimitiveWritable value = new ArrayPrimitiveWritable();

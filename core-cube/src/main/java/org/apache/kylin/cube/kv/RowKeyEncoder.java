@@ -143,11 +143,13 @@ public class RowKeyEncoder extends AbstractRowKeyEncoder implements java.io.Seri
     @Override
     public byte[] encode(String[] values) {
         byte[] bytes = new byte[this.getBytesLength()];
+        // header部分有（shard id和cuboid id， 2字节+8字节）
         int offset = getHeaderLength();
 
         for (int i = 0; i < cuboid.getColumns().size(); i++) {
             TblColRef column = cuboid.getColumns().get(i);
             int colLength = colIO.getColumnLength(column);
+            // 这里填入各个维度列的编码值
             fillColumnValue(column, colLength, values[i], bytes, offset);
             offset += colLength;
         }

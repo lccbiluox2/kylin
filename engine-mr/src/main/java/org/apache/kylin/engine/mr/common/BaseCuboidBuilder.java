@@ -91,6 +91,7 @@ public class BaseCuboidBuilder implements java.io.Serializable {
 
     public byte[] buildKey(String[] flatRow) {
         String[] colKeys = kvBuilder.buildKey(flatRow);
+        // rowKey编码
         return rowKeyEncoder.encode(colKeys);
     }
 
