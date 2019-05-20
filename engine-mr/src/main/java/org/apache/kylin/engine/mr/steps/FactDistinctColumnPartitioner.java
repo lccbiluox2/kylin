@@ -58,13 +58,22 @@ public class FactDistinctColumnPartitioner extends Partitioner<SelfDefineSortabl
         reducerMapping = new FactDistinctColumnsReducerMapping(cube);
     }
 
+    /**
+     * 在FactDistinctColumnPartitioner中根据SelfDefineSortableKey(COLUMN_INDEX)选择分区
+     * @param skey
+     * @param value
+     * @param numReduceTasks
+     * @return
+     */
     @Override
     public int getPartition(SelfDefineSortableKey skey, Text value, int numReduceTasks) {
         Text key = skey.getText();
+        // 统计任务
         if (key.getBytes()[0] == FactDistinctColumnsReducerMapping.MARK_FOR_HLL_COUNTER) {
             Long cuboidId = Bytes.toLong(key.getBytes(), 1, Bytes.SIZEOF_LONG);
             return reducerMapping.getReducerIdForCuboidRowCount(cuboidId);
         } else {
+            // 抽取纬度值任务，直接根据COLUMN_INDEX指定分区
             return BytesUtil.readUnsigned(key.getBytes(), 0, 1);
         }
     }

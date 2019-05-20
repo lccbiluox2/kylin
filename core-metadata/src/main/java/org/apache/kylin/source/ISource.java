@@ -37,11 +37,17 @@ public interface ISource extends Closeable {
     /**
      * Return an adaptor that implements specified interface as requested by the build engine.
      * The IMRInput in particular, is required by the MR build engine.
+     *
+     * 适配指定的构建引擎接口，返回一个对象，实现指定的IN接口，该接口主要由计算引擎调用，要求数据源向计算引擎适配，
+     * 如果数据源无法提供指定的接口实现，则适配失败，cube构建将无法进行。
      */
     <I> I adaptToBuildEngine(Class<I> engineInterface);
 
     /**
      * Return a ReadableTable that can iterate through the rows of given table.
+     *
+     * 返回一个ReadableTnable，用来顺序读取一个表，除了计算引擎之外，有时也会调用此方法顺序访问数据维表中的内容，用来创建维度字段或者
+     * 维度快照。
      */
     IReadableTable createReadableTable(TableDesc tableDesc, String uuid);
 

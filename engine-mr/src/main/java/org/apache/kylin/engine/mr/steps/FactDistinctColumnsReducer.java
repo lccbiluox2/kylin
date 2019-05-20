@@ -132,10 +132,20 @@ public class FactDistinctColumnsReducer extends KylinReducer<SelfDefineSortableK
         }
     }
 
+
+    /**
+     * 在FactDistinctColumnsReducer中输出去重后的维度值或输出通过HLL近似算法统计CuboID去重后的行数
+     * @param skey
+     * @param values
+     * @param context
+     * @throws IOException
+     * @throws InterruptedException
+     */
     @Override
     public void doReduce(SelfDefineSortableKey skey, Iterable<Text> values, Context context)
             throws IOException, InterruptedException {
         Text key = skey.getText();
+        // 统计逻辑
         if (isStatistics) {
             // for hll
             long cuboidId = Bytes.toLong(key.getBytes(), 1, Bytes.SIZEOF_LONG);
@@ -144,12 +154,14 @@ public class FactDistinctColumnsReducer extends KylinReducer<SelfDefineSortableK
                 ByteBuffer bf = ByteBuffer.wrap(value.getBytes(), 0, value.getLength());
                 hll.readRegisters(bf);
 
+                // 累计Mapper输出的各个CuboID未去重的行数(每个Reduce处理部分CuboIDs)
                 totalRowsBeforeMerge += hll.getCountEstimate();
 
                 if (cuboidId == baseCuboidId) {
                     baseCuboidRowCountInMappers.add(hll.getCountEstimate());
                 }
 
+                // 合并CuboID
                 if (cuboidHLLMap.get(cuboidId) != null) {
                     cuboidHLLMap.get(cuboidId).merge(hll);
                 } else {
@@ -172,8 +184,11 @@ public class FactDistinctColumnsReducer extends KylinReducer<SelfDefineSortableK
             //if dict column
             if (cubeDesc.getAllColumnsNeedDictionaryBuilt().contains(col)) {
                 if (buildDictInReducer) {
+                    // 如果需要在Reduce阶段构建词典，则在doCleanup后构建完输出词典文件
+                    // output written to baseDir/colName/colName.rldict-r-00000 (etc)
                     builder.addValue(value);
                 } else {
+                    // 直接输出去重后的维度值
                     byte[] keyBytes = Bytes.copy(key.getBytes(), 1, key.getLength() - 1);
                     // output written to baseDir/colName/-r-00000 (etc)
                     String fileName = col.getIdentity() + "/";
@@ -200,6 +215,7 @@ public class FactDistinctColumnsReducer extends KylinReducer<SelfDefineSortableK
             Collections.sort(allCuboids);
 
             logMapperAndCuboidStatistics(allCuboids); // for human check
+            //  输出通过HLL近似算法统计CuboID去重后的行数
             outputStatistics(allCuboids);
         } else {
             //dimension col
@@ -251,22 +267,30 @@ public class FactDistinctColumnsReducer extends KylinReducer<SelfDefineSortableK
         ByteBuffer valueBuf = ByteBuffer.allocate(BufferedMeasureCodec.DEFAULT_BUFFER_SIZE);
 
         // mapper overlap ratio at key -1
+        // 获取进入这个Reduce各个CuboID去重后的最终统计行数
+        // mapper overlap ratio at key -1
         long grandTotal = 0;
         for (HLLCounter hll : cuboidHLLMap.values()) {
+            // 累计各个CuboID去重后的最终统计行数
             grandTotal += hll.getCountEstimate();
         }
+        // 输出进入这个Reduce中的各Mapper间的重复度，totalRowsBeforeMerge / grandTotal
         double mapperOverlapRatio = grandTotal == 0 ? 0 : (double) totalRowsBeforeMerge / grandTotal;
         mos.write(BatchConstants.CFG_OUTPUT_STATISTICS, new LongWritable(-1),
                 new BytesWritable(Bytes.toBytes(mapperOverlapRatio)), statisticsFileName);
 
         // mapper number at key -2
+        //  Mapper数量
+        // mapper number at key -2
         mos.write(BatchConstants.CFG_OUTPUT_STATISTICS, new LongWritable(-2),
                 new BytesWritable(Bytes.toBytes(baseCuboidRowCountInMappers.size())), statisticsFileName);
 
+        // 抽样百分比
         // sampling percentage at key 0
         mos.write(BatchConstants.CFG_OUTPUT_STATISTICS, new LongWritable(0L),
                 new BytesWritable(Bytes.toBytes(samplingPercentage)), statisticsFileName);
 
+        // 输出进入这个Reduce的各个cuboId的最终统计结果
         for (long i : allCuboids) {
             valueBuf.clear();
             cuboidHLLMap.get(i).writeRegisters(valueBuf);

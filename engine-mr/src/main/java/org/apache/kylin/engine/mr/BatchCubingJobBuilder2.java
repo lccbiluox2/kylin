@@ -60,9 +60,21 @@ public class BatchCubingJobBuilder2 extends JobBuilderSupport {
         final String cuboidRootPath = getCuboidRootPath(jobId);
 
         // Phase 1: Create Flat Table & Materialize Hive View in Lookup Tables
+        /**
+         * 第一阶段：创建平表。
+         *
+         * 这一阶段的主要任务是预计算连接运算符，把事实表和维表连接为一张大表，也称为平表。这部分工作可通过调用数据源接口来完成，
+         * 因为数据源一般有现成的计算表连接方法，高效且方便，没有必要在计算引擎中重复实现。
+         */
         inputSide.addStepPhase1_CreateFlatTable(result);
 
         // Phase 2: Build Dictionary
+        /**
+         * 第二阶段：创建字典。
+         * 创建字典由三个子任务完成，由MR引擎完成，分别是抽取列值、创建字典和保存统计信息。是否使用字典是构建引擎的选择，
+         * 使用字典的好处是有很好的数据压缩率，可降低存储空间，同时也提升存储读取的速度。缺点是构建字典需要较多的内存资源，
+         * 创建维度基数超过千万的容易造成内存溢出。
+         */
         result.addTask(createFactDistinctColumnsStep(jobId));
 
         // 判断是否是高基维（UHC），如果是则添加新的任务对高基维进行处理
@@ -86,12 +98,22 @@ public class BatchCubingJobBuilder2 extends JobBuilderSupport {
         }
 
         // Phase 3: Build Cube
-        // 构建CUBE
+        /**
+         * 第三阶段：构建Cube。
+         * 其中包含两种构建cube的算法，分别是分层构建和快速构建。对于不同的数据分布来说它们各有优劣，区别主要在于数据通过网络洗牌
+         * 的策略不同。两种算法的子任务将全部被加入工作流计划中，在执行时会根据源数据的统计信息自动选择一种算法，未被选择的算法的
+         * 子任务将被自动跳过。在构建cube的最后还将调用存储引擎的接口，存储引擎负责将计算完的cube放入引擎。
+         */
         addLayerCubingSteps(result, jobId, cuboidRootPath); // layer cubing, only selected algorithm will execute
         addInMemCubingSteps(result, jobId, cuboidRootPath); // inmem cubing, only selected algorithm will execute
         outputSide.addStepPhase3_BuildCube(result);
 
         // Phase 4: Update Metadata & Cleanup
+        /**
+         * 第四阶段：更新元数据和清理。
+         *
+         * 最后阶段，cube已经构建完毕，MR引擎将首先添加子任务更新cube元数据，然后分别调用数据源接口和存储引擎接口对临时数据进行清理。
+         */
         result.addTask(createUpdateCubeInfoAfterBuildStep(jobId, lookupMaterializeContext));
         inputSide.addStepPhase4_Cleanup(result);
         outputSide.addStepPhase4_Cleanup(result);

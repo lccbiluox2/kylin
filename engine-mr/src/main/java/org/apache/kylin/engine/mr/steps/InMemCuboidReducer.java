@@ -74,9 +74,16 @@ public class InMemCuboidReducer extends KylinReducer<ByteArrayWritable, ByteArra
         outputValue = new Text();
     }
 
+    /**
+     * 从base cuboid 逐层计算每层的cuboid，也是MapReduce作业，map阶段每层维度数依次减少，reduce阶段对指标进行聚合。
+     * @param key
+     * @param values
+     * @param context
+     * @throws IOException
+     * @throws InterruptedException
+     */
     @Override
     public void doReduce(ByteArrayWritable key, Iterable<ByteArrayWritable> values, Context context) throws IOException, InterruptedException {
-
         aggs.reset();
 
         for (ByteArrayWritable value : values) {

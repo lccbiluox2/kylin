@@ -88,6 +88,14 @@ public class NDCuboidMapper extends KylinMapper<Text, Text, Text, Text> {
         long cuboidId = rowKeySplitter.split(key.getBytes());
         Cuboid parentCuboid = Cuboid.findForMandatory(cubeDesc, cuboidId);
 
+        /**
+         * Build N-Dimension Cuboid
+           ## 构建N维cuboid
+           这些步骤是“逐层”构建cube的过程，每一步以前一步的输出作为输入，然后去掉一个维度以聚合得到一个子cuboid。举个例子，cuboid ABCD去掉A得到BCD，去掉B得到ACD。
+           有些cuboid可以从一个以上的父cuboid聚合得到，这种情况下，Kylin会选择最小的一个父cuboid。举例,AB可以从ABC(id:1110)和ABD(id:1101)生成，则ABD会被选中，因为它的比ABC要小。
+           在这基础上，如果D的基数较小，聚合运算的成本就会比较低。所以，当设计rowkey序列的时候，请记得将基数较小的维度放在末尾。这样不仅有利于cube构建，而且有助于cube查询，因为预聚合也遵循相同的规则。
+           通常来说，从N维到(N/2)维的构建比较慢，因为这是cuboid数量爆炸性增长的阶段：N维有1个cuboid，(N-1)维有N个cuboid，(N-2)维有(N-2)*(N-1)个cuboid，以此类推。经过(N/2)维构建的步骤，整个构建任务会逐渐变快。
+        */
         Collection<Long> myChildren = cuboidScheduler.getSpanningCuboid(cuboidId);
 
         // if still empty or null

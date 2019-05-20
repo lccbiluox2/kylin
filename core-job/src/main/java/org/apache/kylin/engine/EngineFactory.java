@@ -31,6 +31,13 @@ public class EngineFactory {
     // Use thread-local because KylinConfig can be thread-local and implementation might be different among multiple threads.
     private static ThreadLocal<ImplementationSwitch<IBatchCubingEngine>> engines = new ThreadLocal<>();
 
+
+    /**
+     * 该方法用于返回构建引擎，根据下图中可看出支持 MR 和 Spark
+     *
+     * @param aware
+     * @return
+     */
     public static IBatchCubingEngine batchEngine(IEngineAware aware) {
         ImplementationSwitch<IBatchCubingEngine> current = engines.get();
         if (current == null) {
@@ -51,7 +58,9 @@ public class EngineFactory {
         return batchEngine(newSegment).getJoinedFlatTableDesc(newSegment);
     }
 
-    /** Build a new cube segment, typically its time range appends to the end of current cube. */
+    /** Build a new cube segment, typically its time range appends to the end of current cube.
+     * 这里是先根据配置获得构建引擎，创建对应的 builder 实例并调用 build 方法。
+     * */
     public static DefaultChainedExecutable createBatchCubingJob(CubeSegment newSegment, String submitter) {
         return batchEngine(newSegment).createBatchCubingJob(newSegment, submitter);
     }

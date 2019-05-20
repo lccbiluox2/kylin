@@ -23,6 +23,7 @@ import java.io.Serializable;
 import org.apache.kylin.metadata.datatype.DataType;
 
 /**
+ * 每种不同的指标都会有对应的聚合算法，所有指标聚合的基类是org.apache.kylin.measure.MeasureAggregator。
  */
 @SuppressWarnings("serial")
 abstract public class MeasureAggregator<V> implements Serializable {
@@ -71,6 +72,12 @@ abstract public class MeasureAggregator<V> implements Serializable {
 
     abstract public void aggregate(V value);
 
+    /**
+     * //不同类型的指标算法会实现该方法
+     * @param value1
+     * @param value2
+     * @return
+     */
     abstract public V aggregate(V value1, V value2);
 
     abstract public V getState();

@@ -72,6 +72,11 @@ public class HiveMRInput extends HiveInputBase implements IMRInput {
         };
     }
 
+
+    /**
+     * HiveTableInputFormat实现了IMRTableInputFormat接口，它主要使用了HCatInputFormat作为MapReduce的输入格式，
+     * 用通用的方式读取所有类型的Hive表。Mapper输入对象为DefaultHCatRecord，统一转换为String[]后交由构建引擎处理。
+     */
     public static class HiveTableInputFormat implements IMRTableInputFormat {
         final String dbName;
         final String tableName;
@@ -111,6 +116,11 @@ public class HiveMRInput extends HiveInputBase implements IMRInput {
         }
     }
 
+
+    /**
+     * BatchCubingInputSide实现了IMRBatchCubingInputSide接口。主要实现了在构建的第一阶段创建平表的步骤。首先用count（*）
+     * 查询获取Hive平表的总行数，然后用第二句HQL创建Hive平表，同时添加参数根据总行数分配Reducer数目。
+     */
     public static class BatchCubingInputSide implements IMRBatchCubingInputSide {
 
         final protected IJoinedFlatTableDesc flatDesc;

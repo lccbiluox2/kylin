@@ -41,6 +41,13 @@ public class HiveSource implements ISource {
         return new HiveMetadataExplorer();
     }
 
+    /**
+     * 支持两种实例，支持两种引擎
+     *
+     * @param engineInterface
+     * @param <I>
+     * @return
+     */
     @SuppressWarnings("unchecked")
     @Override
     public <I> I adaptToBuildEngine(Class<I> engineInterface) {
@@ -53,6 +60,13 @@ public class HiveSource implements ISource {
         }
     }
 
+    /**
+     * 返回一个ReadableTable对象，提供读取一张hive表的能力。
+     *
+     * @param tableDesc
+     * @param uuid
+     * @return
+     */
     @Override
     public IReadableTable createReadableTable(TableDesc tableDesc, String uuid) {
         // hive view must have been materialized already

@@ -167,6 +167,14 @@ public class FactDistinctColumnsMapper<KEYIN> extends FactDistinctColumnsMapperB
         return calculatorNum;
     }
 
+    /**
+     * 在FactDistinctColumnsMapper中输出维度值或通过HHL近似算法统计每个Mapper中各个CuboID的去重行数
+     * @param key
+     * @param record
+     * @param context
+     * @throws IOException
+     * @throws InterruptedException
+     */
     @Override
     public void doMap(KEYIN key, Object record, Context context) throws IOException, InterruptedException {
         Collection<String[]> rowCollection = flatTableInputFormat.parseMapperInput(record);
@@ -183,6 +191,7 @@ public class FactDistinctColumnsMapper<KEYIN> extends FactDistinctColumnsMapperB
                 //for dic column, de dup before write value; for dim not dic column, hold util doCleanup()
                 if (dictColDeduper.isDictCol(i)) {
                     if (dictColDeduper.add(i, fieldValue)) {
+                        // 输出维度值，KEY=COLUMN_INDEX+COLUME_VALUE,VALUE=EMPTY_TEXT
                         writeFieldValue(context, type, i, fieldValue);
                     }
                 } else {
@@ -197,6 +206,7 @@ public class FactDistinctColumnsMapper<KEYIN> extends FactDistinctColumnsMapperB
                 }
             }
 
+            // 抽样统计，KEY=CUBOID,VALUE=HLLCount
             if (rowCount % 100 < samplingPercentage) {
                 putRowKeyToHLL(row);
             }
@@ -237,6 +247,7 @@ public class FactDistinctColumnsMapper<KEYIN> extends FactDistinctColumnsMapperB
             HLLCounter hll;
 
             for (int i = 0; i < cuboidIds.length; i++) {
+                // 输出各个CuboID的去重行数HLLCount
                 hll = cuboidsHLL[i];
                 tmpbuf.clear();
                 tmpbuf.put((byte) FactDistinctColumnsReducerMapping.MARK_FOR_HLL_COUNTER); // one byte

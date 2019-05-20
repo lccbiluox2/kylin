@@ -84,14 +84,19 @@ public class SaveStatisticsStep extends AbstractExecutable {
             int samplingPercentage = -1;
             int mapperNumber = -1;
             for (Path item : statisticsFiles) {
+
+                // 读取解析统计文件
                 CubeStatsReader.CubeStatsResult cubeStatsResult = new CubeStatsReader.CubeStatsResult(item,
                         kylinConf.getCubeStatsHLLPrecision());
+                // 获取各个CuboID的计数器
                 cuboidHLLMap.putAll(cubeStatsResult.getCounterMap());
                 long pGrantTotal = 0L;
                 for (HLLCounter hll : cubeStatsResult.getCounterMap().values()) {
                     pGrantTotal += hll.getCountEstimate();
                 }
+                // 累计所有Mapper输出的cuboID行数
                 totalRowsBeforeMerge += pGrantTotal * cubeStatsResult.getMapperOverlapRatio();
+                // 累计去重后的cuboID统计行数
                 grantTotal += pGrantTotal;
                 int pMapperNumber = cubeStatsResult.getMapperNumber();
                 if (pMapperNumber > 0) {
@@ -124,7 +129,15 @@ public class SaveStatisticsStep extends AbstractExecutable {
             double mapperOverlapRatio = grantTotal == 0 ? 0 : (double) totalRowsBeforeMerge / grantTotal;
             CubingJob cubingJob = (CubingJob) getManager()
                     .getJob(CubingExecutableUtil.getCubingJobId(this.getParams()));
+            // fact源数据行数
             long sourceRecordCount = cubingJob.findSourceRecordCount();
+
+            // 保存CuboID最终统计信息到最终统计文件cuboid_statistics.seq中
+            // cuboidHLLMap CuboID的统计信息
+            // samplingPercentage 抽样百分比
+            // mapperNumber Mapper数
+            // mapperOverlapRatio 各个Mapper间的重复度
+            // sourceRecordCount fact源数据行数
             CubeStatsWriter.writeCuboidStatistics(hadoopConf, statisticsDir, cuboidHLLMap, samplingPercentage,
                     mapperNumber, mapperOverlapRatio, sourceRecordCount);
 
@@ -134,10 +147,13 @@ public class SaveStatisticsStep extends AbstractExecutable {
             FSDataInputStream is = fs.open(statisticsFile);
             try {
                 // put the statistics to metadata store
+                // 把统计信息存储到kylin的元数据引擎中
                 String resPath = newSegment.getStatisticsResourcePath();
                 rs.putResource(resPath, is, System.currentTimeMillis());
                 logger.info(newSegment + " stats saved to resource " + resPath);
 
+
+                // 根据抽样数据计算重复度，选择Cube构建算法，如mapperOverlapRatio > 7 选逐层算法，否则选快速算法
                 StatisticsDecisionUtil.decideCubingAlgorithm(cubingJob, newSegment);
                 StatisticsDecisionUtil.optimizeCubingPlan(newSegment);
             } finally {

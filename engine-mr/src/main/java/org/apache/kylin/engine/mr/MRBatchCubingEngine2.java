@@ -37,11 +37,28 @@ public class MRBatchCubingEngine2 implements IBatchCubingEngine {
         return new CubeJoinedFlatTableDesc(newSegment);
     }
 
+    /**
+     *  返回一个工作流计划，泳衣构建指定的 CubeSegmens
+     *
+     *  DefaultChainedExecutable 代表了一种可执行的对象，其中包含了很多子任务，他的执行过程依次是串行执行每一个子任务，直到
+     *  所有的子任务都执行完成，kylin的cube构建比较复杂，要执行很多步骤，步骤之间有直接的依赖性和顺序性，DefaultChainedExecutable
+     *  很好的抽象出来这个连续依次执行的模型，可以用来表示cube的构建的工作了流。
+     *
+     * @param newSegment
+     * @param submitter
+     * @return
+     */
     @Override
     public DefaultChainedExecutable createBatchCubingJob(CubeSegment newSegment, String submitter) {
         return new BatchCubingJobBuilder2(newSegment, submitter).build();
     }
 
+    /**
+     * 返回一个工作流计划，泳衣合并指定的CubeSegment
+     * @param mergeSegment
+     * @param submitter
+     * @return
+     */
     @Override
     public DefaultChainedExecutable createBatchMergeJob(CubeSegment mergeSegment, String submitter) {
         return new BatchMergeJobBuilder2(mergeSegment, submitter).build();
@@ -52,11 +69,20 @@ public class MRBatchCubingEngine2 implements IBatchCubingEngine {
         return new BatchOptimizeJobBuilder2(optimizeSegment, submitter).build();
     }
 
+    /**
+     * 指明该计算引擎的IN接口。
+     * @return
+     */
     @Override
     public Class<?> getSourceInterface() {
         return IMRInput.class;
     }
 
+    /**
+     * 指明该计算引擎的OUT接口。
+     *
+     * @return
+     */
     @Override
     public Class<?> getStorageInterface() {
         return IMROutput2.class;

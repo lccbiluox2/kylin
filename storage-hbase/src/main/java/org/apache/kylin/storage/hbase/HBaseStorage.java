@@ -42,6 +42,13 @@ public class HBaseStorage implements IStorage {
 
     public final static String v2CubeStorageQuery = "org.apache.kylin.storage.hbase.cube.v2.CubeStorageQuery";
 
+    /**
+     * createQuery方法，返回指定IRealization（数据索引实现）的一个查询对象。因为HBase存储是为Cube定制的，
+     * 所以只支持Cube类型的数据索引。具体的IStorageQuery实现应根据存储引擎的版本而有所不同。
+     *
+     * @param realization
+     * @return
+     */
     @Override
     public IStorageQuery createQuery(IRealization realization) {
 
@@ -82,6 +89,14 @@ public class HBaseStorage implements IStorage {
         return partitionColRef;
     }
 
+
+    /**
+     * adaptToBuildEngine方法，适配IMROutput2的输出接口。
+     *
+     * @param engineInterface
+     * @param <I>
+     * @return
+     */
     @SuppressWarnings("unchecked")
     @Override
     public <I> I adaptToBuildEngine(Class<I> engineInterface) {

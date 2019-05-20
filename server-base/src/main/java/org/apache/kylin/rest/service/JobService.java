@@ -228,13 +228,17 @@ public class JobService extends BasicService implements InitializingBean {
             CubeBuildTypeEnum buildType, boolean force, String submitter) throws IOException {
         Message msg = MsgPicker.getMsg();
 
+        // 检测 Cube 的状态
         if (cube.getStatus() == RealizationStatusEnum.DESCBROKEN) {
             throw new BadRequestException(String.format(Locale.ROOT, msg.getBUILD_BROKEN_CUBE(), cube.getName()));
         }
 
+        // 根据 Cube 的元信息，进行签名校验，将已有签名与计算出来的进行比较，判断 Cube 信息的正确性
         checkCubeDescSignature(cube);
+        // 检测 Cube 是否符合构建状态，进一步查看源码可知如果已经有处于 pending 状态的 segment，则该 Cube 不能进行构建，抛出异常
         checkAllowBuilding(cube);
 
+        // 检测是否能并行构建
         if (buildType == CubeBuildTypeEnum.BUILD || buildType == CubeBuildTypeEnum.REFRESH) {
             checkAllowParallelBuilding(cube);
         }
@@ -246,10 +250,14 @@ public class JobService extends BasicService implements InitializingBean {
             if (buildType == CubeBuildTypeEnum.BUILD) {
                 //获取数据源类型（HiveSource、JdbcSource、KafkaSource）
                 ISource source = SourceManager.getSource(cube);
+                // 获得构建范围
                 SourcePartition src = new SourcePartition(tsRange, segRange, sourcePartitionOffsetStart,
                         sourcePartitionOffsetEnd);
+                // 在此填充数据，个人理解为对于实时数据，在执行完前面的步骤后又产生了时间间隔，将这部分数据加载进来，并添加一个 segment
                 src = source.enrichSourcePartitionBeforeBuild(cube, src);
                 newSeg = getCubeManager().appendSegment(cube, src);
+
+                // 通过构建引擎生成新的 job 任务
                 job = EngineFactory.createBatchCubingJob(newSeg, submitter);
             } else if (buildType == CubeBuildTypeEnum.MERGE) {
                 newSeg = getCubeManager().mergeSegments(cube, tsRange, segRange, force);
@@ -261,6 +269,7 @@ public class JobService extends BasicService implements InitializingBean {
                 throw new BadRequestException(String.format(Locale.ROOT, msg.getINVALID_BUILD_TYPE(), buildType));
             }
 
+            // 将任务添加到任务调度系统
             getExecutableManager().addJob(job);
 
         } catch (Exception e) {
@@ -278,6 +287,7 @@ public class JobService extends BasicService implements InitializingBean {
             throw e;
         }
 
+        // 返回任务实例信息
         JobInstance jobInstance = getSingleJobInstance(job);
 
         return jobInstance;

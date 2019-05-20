@@ -27,9 +27,17 @@ import org.apache.kylin.cube.CubeSegment;
 import org.apache.kylin.cube.cuboid.CuboidScheduler;
 import org.apache.kylin.job.execution.DefaultChainedExecutable;
 
+
+/**
+ * 这是BatchCubingJobBuilder2对存储引擎的要求，所有希望接入BatchCubingJobBuilder2的存储都必须实现该接口。
+ * IMRBatchCubingOutputSide2代表存储引擎配合构建引擎创建工作流计划
+ */
 public interface IMROutput2 {
 
-    /** Return a helper to participate in batch cubing job flow. */
+    /** Return a helper to participate in batch cubing job flow.
+     *
+     * 返回一个IMRBatchCubingOutputSide2对象，参于创建指定的cubeSegment的工作流
+     * */
     public IMRBatchCubingOutputSide2 getBatchCubingOutputSide(CubeSegment seg);
 
     /**
@@ -40,10 +48,15 @@ public interface IMROutput2 {
      * - Phase 2: Build Dictionary
      * - Phase 3: Build Cube
      * - Phase 4: Update Metadata & Cleanup
+     *
+     * 本辅助接口代表数据输出端参与创建构建cubeSegments的工作流。
      */
     public interface IMRBatchCubingOutputSide2 {
 
-        /** Add step that executes after build dictionary and before build cube. */
+        /** Add step that executes after build dictionary and before build cube.
+         *
+         * 由构建引擎在字典创建后调用。存储引擎可以借此机会在工作流中添加步骤完成存储端的初始化或准备工作。
+         * */
         public void addStepPhase2_BuildDictionary(DefaultChainedExecutable jobFlow);
 
         /**
@@ -52,10 +65,16 @@ public interface IMROutput2 {
          * The cuboid output is a directory of sequence files, where key is CUBOID+D1+D2+..+Dn, 
          * value is M1+M2+..+Mm. CUBOID is 8 bytes cuboid ID; Dx is dimension value with
          * dictionary encoding; Mx is measure value serialization form.
+         *
+         * 由构建引擎在Cube计算完毕之后调用，通知存储引擎保存CubeSegment的内容。每个构建引擎计算Cube的方法和结果的存储格式可能
+         * 都会有所不同。存储引擎必须依照数据接口的协议读取CubeSegment的内容，并加以保存。
          */
         public void addStepPhase3_BuildCube(DefaultChainedExecutable jobFlow);
 
-        /** Add step that does any necessary clean up. */
+        /** Add step that does any necessary clean up.
+         *
+         * 由构建引擎在最后清理阶段调用，给存储引擎清理临时垃圾和回收资源的机会。
+         * */
         public void addStepPhase4_Cleanup(DefaultChainedExecutable jobFlow);
 
         public IMROutputFormat getOuputFormat();

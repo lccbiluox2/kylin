@@ -85,12 +85,16 @@ public class KylinConfig extends KylinConfigBase {
     }
 
     public static KylinConfig getInstanceFromEnv() {
+        // 同步锁
         synchronized (KylinConfig.class) {
+            // 获取本地实例的config
             KylinConfig config = THREAD_ENV_INSTANCE.get();
+            // 判断实例中的config是否存在，如果存在则直接返回config
             if (config != null) {
                 return config;
             }
 
+            //如果不存在则读本地配置文件
             if (SYS_ENV_INSTANCE == null) {
                 try {
                     config = new KylinConfig();
